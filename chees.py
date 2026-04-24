@@ -1,12 +1,12 @@
 import pygame
-from pices import Piece, Pawn, Rook, Knight, Bishop, King, Queen
+from pices import Piece, Pawn, Rook, Knight, Bishop, King, Queen, Ghost
 
 import math
 #
 #PYGAME SETUP
 #
-WIDTH = 1000
-HEIGHT = 600
+WIDTH = 800
+HEIGHT = 800
 
 window = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
@@ -18,6 +18,10 @@ pygame.init()
 selected_piece = None
 selected_piece_moves = []
 pieces = []
+ghosts = []
+current_turn = "white"
+move_counter = 0
+ 
 #
 #FUNCTIONS
 #
@@ -87,6 +91,8 @@ def get_pressed_pieces(piece_list):
     mpos = pygame.mouse.get_pos()
     
     for piece in piece_list:
+        if piece.type == "ghost" or piece.color != current_turn:
+            continue
         rect = piece.get_rect()
         if piece.get_rect().collidepoint(mpos):
             return piece
@@ -128,8 +134,11 @@ def get_possible_moves(board, piece: Piece):
                     break
                 moves.append([new_index, False])
             else:
+                obstructing_piece: Piece = gridd[new_index]
+                if obstructing_piece.type == "ghost" and piece.type != "pawn":
+                    moves.append([new_index, False])
+                    continue
                 if move.can_kill:
-                    obstructing_piece: Piece = gridd[new_index]
                     if obstructing_piece.color == piece.color:
                         break
                     moves.append([new_index, True])
@@ -138,11 +147,33 @@ def get_possible_moves(board, piece: Piece):
     return moves
 
 def execute_move(board, piece: Piece, move):
+    for ghost in ghosts.copy():
+        ghost.update()
+        if ghost.health < 1:
+            ghosts.remove(ghost)
+            if board["gridd"][ghost.board_index] == ghost:
+                board["gridd"][ghost.board_index] = None 
+    
+    special = piece.on_move_code(move) #kan vara void
+    piece_index = piece.get_board_index()
+    if special == "spawn ghost":
+        idx = piece_index + (move[0] - piece_index) // 2
+        ghost = Ghost(idx, piece)
+        ghosts.append(ghost)
+        pieces.append(ghost)
+        board["gridd"][idx] = ghost
+
     gridd = board["gridd"]
-    gridd[piece.get_board_index()] = None
+    gridd[piece_index] = None
 
     if gridd[move[0]] != None:
-        pieces.remove(gridd[move[0]])
+        if gridd[move[0]].type == "ghost":
+            if gridd[move[0]].color != piece.color and piece.type == "pawn":
+                pieces.remove(gridd[move[0]].parent)
+        else:
+            pieces.remove(gridd[move[0]])
+        
+
 
     gridd[move[0]] = piece
     place_piece_from_index(board, piece, move[0])
@@ -150,6 +181,7 @@ def execute_move(board, piece: Piece, move):
         print("You killed a little guy!")
 
 def choose_move(board, piece):
+    global move_counter
     mpos = pygame.mouse.get_pos()
     possible_moves = get_possible_moves(board, piece)
     target_pos = get_square_from_pos(board, mpos)
@@ -158,12 +190,14 @@ def choose_move(board, piece):
     for move in possible_moves:
         if move[0] == target_pos:
             execute_move(board, piece, move)
+            move_counter += 1
 
 #
 #SETUP FUNCTION
 #
 size = 8
 main_board = mk_board(size)
+
 images = {"white pawn": load_piece_image("bonne.png", main_board),
           "black pawn": load_piece_image("bonne2.png", main_board),
           "white rook": load_piece_image("rook.png", main_board),
@@ -243,14 +277,17 @@ place_pieces_normaly(main_board)
 
 
 while True:
+    print(ghosts)
+    current_turn = "white" if move_counter % 2 == 0 else "black"
+
     window.fill((255, 255, 255))
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
         if event.type == pygame.MOUSEBUTTONDOWN:
-            pressed_pieces = get_pressed_pieces(pieces)
+            pressed_piece = get_pressed_pieces(pieces)
             if not selected_piece:
-                selected_piece = pressed_pieces
+                selected_piece = pressed_piece
                 if selected_piece:
                     selected_piece_moves = get_possible_moves(main_board, selected_piece)
             else:

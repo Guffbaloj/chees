@@ -8,6 +8,7 @@ class Piece:
         self.images = images
         self.moveset = []
         self.color = color
+        self.first_move = True
     def update(self):
         pass  
 
@@ -29,6 +30,9 @@ class Piece:
         rect = img.get_rect()
         display.blit(img, self.pos, rect)
 
+    def on_move_code(self, move):
+        self.first_move = False
+
 class Move:
     def __init__(self, vector: list[int, int], range = 8, can_kill = True, kill_only = False):
         self.vector = vector
@@ -39,9 +43,17 @@ class Move:
 class Pawn(Piece):
     def __init__(self, board, images, color):
         super().__init__(board, "pawn", images, color)
-        self.moveset = [Move([0, 1], range= 1, can_kill= False),
+        self.moveset = [Move([0, 1], range= 2, can_kill= False),
                         Move([1, 1], range= 1, can_kill= True, kill_only= True),
                         Move([-1, 1], range= 1, can_kill= True, kill_only= True)]
+    def on_move_code(self, move):
+        if self.first_move:
+            self.moveset[0] = Move([0, 1], range= 1, can_kill= False)
+            bidx = self.get_board_index()
+            if abs(bidx - move[0]) == 2 * self.board["size"]: #Om bonden har gått 2 steg:
+                return "spawn ghost"
+
+        super().on_move_code(move)
 
 class Knight(Piece):
     def __init__(self, board, images, color):
@@ -93,4 +105,17 @@ class King(Piece):
                         Move([0, 1], range= 1, can_kill= True),
                         Move([-1,0], range= 1, can_kill= True),
                         Move([1, 0], range= 1, can_kill= True)]
-    
+
+class Ghost:
+    def __init__(self, board_index, parent):
+        self.parent = parent
+        self.color = parent.color
+        self.board_index = board_index
+        self.health = 2
+        self.moveset = []
+        self.type = "ghost"
+    def render(self, display):
+        pass
+
+    def update(self):
+        self.health -= 1
