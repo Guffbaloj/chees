@@ -1,19 +1,96 @@
 import pygame
-
+pygame.init()
 class Piece:
-    def __init__(self, board, e_type, images):
+    def __init__(self, board, e_type, images, color):
         self.board = board
         self.type = e_type
         self.pos = (0, 0)
         self.images = images
+        self.moveset = []
+        self.color = color
     def update(self):
         pass  
 
     def set_pos(self, new_pos):
         self.pos = new_pos
 
-    def render(self, display: pygame.Surface):
-        img: pygame.Surface = self.images[self.type]
-        rect = img.get_rect()
-        display.blit(self.images[self.type], self.pos, rect)
+    def get_rect(self):
+        square_size = self.board["square size"]
+        rect = pygame.rect.Rect(self.pos[0], self.pos[1], square_size, square_size)
+        return rect
+    def get_board_index(self):
+        board_size = self.board["size"]
+        square_size = self.board["square size"]
+        render_offset = self.board["render offset"]
+        return (self.pos[0] - render_offset[0]) // square_size + ((self.pos[1] - render_offset[1]) // square_size * board_size)
 
+    def render(self, display: pygame.Surface):
+        img: pygame.Surface = self.images[self.color + " " + self.type]
+        rect = img.get_rect()
+        display.blit(img, self.pos, rect)
+
+class Move:
+    def __init__(self, vector: list[int, int], range = 8, can_kill = True, kill_only = False):
+        self.vector = vector
+        self.range = range
+        self.can_kill = can_kill
+        self.kill_only = kill_only
+
+class Pawn(Piece):
+    def __init__(self, board, images, color):
+        super().__init__(board, "pawn", images, color)
+        self.moveset = [Move([0, 1], range= 1, can_kill= False),
+                        Move([1, 1], range= 1, can_kill= True, kill_only= True),
+                        Move([-1, 1], range= 1, can_kill= True, kill_only= True)]
+
+class Knight(Piece):
+    def __init__(self, board, images, color):
+        super().__init__(board, "knight", images, color)
+        self.moveset = [Move([2, -1], range= 1, can_kill= True),
+                        Move([2, 1], range= 1, can_kill= True),
+                        Move([-1,2], range= 1, can_kill= True),
+                        Move([1, 2], range= 1, can_kill= True),
+                        Move([-2, -1], range= 1, can_kill= True),
+                        Move([-2, 1], range= 1, can_kill= True),
+                        Move([-1,-2], range= 1, can_kill= True),
+                        Move([1, -2], range= 1, can_kill= True)]
+
+class Rook(Piece):
+    def __init__(self, board, images, color):
+        super().__init__(board, "rook", images, color)
+        self.moveset = [Move([0, -1], range= 8, can_kill= True),
+                        Move([0, 1], range= 8, can_kill= True),
+                        Move([-1,0], range= 8, can_kill= True),
+                        Move([1, 0], range= 8, can_kill= True)]
+
+class Bishop(Piece):
+    def __init__(self, board, images, color):
+        super().__init__(board, "bishop", images, color)
+        self.moveset = [Move([-1, -1], range= 8, can_kill= True),
+                        Move([1, 1], range= 8, can_kill= True),
+                        Move([-1,1], range= 8, can_kill= True),
+                        Move([1, -1], range= 8, can_kill= True)]
+
+class Queen(Piece):
+    def __init__(self, board, images, color):
+        super().__init__(board, "queen", images, color)
+        self.moveset = [Move([-1, -1], range= 8, can_kill= True),
+                        Move([1, 1], range= 8, can_kill= True),
+                        Move([-1,1], range= 8, can_kill= True),
+                        Move([1, -1], range= 8, can_kill= True),
+                        Move([0, -1], range= 8, can_kill= True),
+                        Move([0, 1], range= 8, can_kill= True),
+                        Move([-1,0], range= 8, can_kill= True),
+                        Move([1, 0], range= 8, can_kill= True)]
+class King(Piece):
+    def __init__(self, board, images, color):
+        super().__init__(board, "king", images, color)
+        self.moveset = [Move([-1, -1], range= 1, can_kill= True),
+                        Move([1, 1], range= 1, can_kill= True),
+                        Move([-1,1], range= 1, can_kill= True),
+                        Move([1, -1], range= 1, can_kill= True),
+                        Move([0, -1], range= 1, can_kill= True),
+                        Move([0, 1], range= 1, can_kill= True),
+                        Move([-1,0], range= 1, can_kill= True),
+                        Move([1, 0], range= 1, can_kill= True)]
+    
