@@ -234,8 +234,16 @@ def simulate_moves(board, piece_index, pieces): #This function is AI assisted
         
         execute_move(temp_board, temp_piece, move, temp_pieces)
         
-        t_white_king = next(p for p in temp_pieces if p.type == "king" and p.color == "white")
-        t_black_king = next(p for p in temp_pieces if p.type == "king" and p.color == "black")
+        if temp_piece.type == "king":
+            if temp_piece.color == "white":
+                t_white_king = temp_piece
+                t_black_king = next(p for p in temp_pieces if p.type == "king" and p.color == "black")
+            else:
+                t_white_king = next(p for p in temp_pieces if p.type == "king" and p.color == "white")
+                t_black_king = temp_piece
+        else:
+            t_white_king = next(p for p in temp_pieces if p.type == "king" and p.color == "white")
+            t_black_king = next(p for p in temp_pieces if p.type == "king" and p.color == "black")
         
         black_king_idx = t_black_king.get_board_index()
         white_king_idx = t_white_king.get_board_index()
