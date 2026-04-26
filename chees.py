@@ -1,4 +1,5 @@
 import pygame
+import copy
 from pices import Piece, Pawn, Rook, Knight, Bishop, King, Queen, Ghost
 
 import math
@@ -112,7 +113,23 @@ def get_square_from_pos(board, pos):
 #   Returnerar en lista med alla möjliga moves en spelpjäs kan göra
 #   den returnerar en lista med par med en int och en bool [move index, har dödat]
 """
-def get_possible_moves(board, piece: Piece):
+def get_all_thretening_pieces(piece: Piece, pieces: list[Piece], board):
+    print(piece)
+    if not piece:
+        return []
+    piece_index = piece.get_board_index()
+    all_thretening_pieces = [] #en lista med par
+    for other_piece in pieces:
+        if other_piece.color == piece.color:
+            continue
+        moves = get_moves(board, other_piece)
+        for move in moves:
+            if move[0] == piece_index and move[1]:
+                all_thretening_pieces.append(other_piece)
+                continue
+    return all_thretening_pieces
+
+def get_moves(board, piece: Piece):
     board_size = board["size"]
     square_size = board["square size"]
     render_offset = board["render offset"]
@@ -165,13 +182,21 @@ def execute_move(board, piece: Piece, move, pieces):
 
     gridd = board["gridd"]
     gridd[piece_index] = None
-
-    if gridd[move[0]] != None:
-        if gridd[move[0]].type == "ghost":
-            if gridd[move[0]].color != piece.color and piece.type == "pawn":
-                pieces.remove(gridd[move[0]].parent)
-        else:
-            pieces.remove(gridd[move[0]])
+    
+    target_index = move[0]
+    captured_piece = gridd[target_index]
+    
+    if captured_piece is not None:
+        # Instead of pieces.remove(captured_piece), 
+        # find the piece in the list that shares that board index.
+        piece_to_remove = None
+        for p in pieces:
+            if p.get_board_index() == target_index:
+                piece_to_remove = p
+                break
+        
+        if piece_to_remove:
+            pieces.remove(piece_to_remove)
         
 
 
@@ -183,7 +208,7 @@ def execute_move(board, piece: Piece, move, pieces):
 def choose_move(board, piece):
     global move_counter
     mpos = pygame.mouse.get_pos()
-    possible_moves = get_possible_moves(board, piece)
+    possible_moves = get_moves(board, piece)
     target_pos = get_square_from_pos(board, mpos)
     for move in possible_moves:
         if move[0] == target_pos:
@@ -191,42 +216,52 @@ def choose_move(board, piece):
             return "move executed"
     return "no execute"
 
-def get_all_thretening_pieces(piece: Piece, pieces: list[Piece], board):
-    piece_index = piece.get_board_index()
-    all_thretening_pieces = [] #en lista med par
-    for other_piece in pieces:
-        if other_piece.color == piece.color:
-            continue
-        moves = get_possible_moves(board, other_piece)
-        for move in moves:
-            if move[0] == piece_index and move[1]:
-                all_thretening_pieces.append(other_piece)
-                continue
-    return all_thretening_pieces
 
+def simulate_moves(board, piece_index, pieces): #This function is AI assisted
+    game_state = {
+        "board": board,
+        "pieces": pieces
+    }
+    piece_to_move_original = board["gridd"][piece_index]
+    moves = get_moves(board, piece_to_move_original)
+    result_data = []
 
-def simulate_moves(board, piece_index, pieces):
-    global white_king
-    global black_king
-    black_king_idx = black_king.get_board_index()
-    white_king_idx = white_king.get_board_index()
-    pieces_clone = pieces.copy()
-    board_clone = board.copy()
-    piece = board_clone["gridd"][piece_index]
-    moves = get_possible_moves(board, piece)
-    result_data = [] #en lista med listor som säger om 
     for move in moves:
-        data = {"white king in check": False, "black king in chek": False, "move": move}
-        board_clone = board.copy()
+        temp_state = copy.deepcopy(game_state)
+        temp_board = temp_state["board"]
+        temp_pieces = temp_state["pieces"]
+        temp_piece = temp_board["gridd"][piece_index]
         
-        execute_move(board_clone, piece, move, pieces_clone)
-        threats_to_black_king = get_all_thretening_pieces(board_clone["gridd"][black_king_idx], pieces_clone, board_clone)
-        threats_to_white_king = get_all_thretening_pieces(board_clone["gridd"][white_king_idx], pieces_clone, board_clone)
+        execute_move(temp_board, temp_piece, move, temp_pieces)
+        
+        t_white_king = next(p for p in temp_pieces if p.type == "king" and p.color == "white")
+        t_black_king = next(p for p in temp_pieces if p.type == "king" and p.color == "black")
+        
+        black_king_idx = t_black_king.get_board_index()
+        white_king_idx = t_white_king.get_board_index()
 
-        data["white king in check"] = len(threats_to_white_king) > 0
-        data["black king in check"] = len(threats_to_black_king) > 0
-        result_data.append(data)
+        threats_to_black = get_all_thretening_pieces(temp_board["gridd"][black_king_idx], temp_pieces, temp_board)
+        threats_to_white = get_all_thretening_pieces(temp_board["gridd"][white_king_idx], temp_pieces, temp_board)
+
+        result_data.append({
+            "white king in check": len(threats_to_white) > 0,
+            "black king in check": len(threats_to_black) > 0,
+            "move": move
+        })
+
     return result_data
+
+def get_possible_moves(board, piece: Piece):
+    possible_moves = []
+    simulated_data = simulate_moves(board, piece.get_board_index(), copy.deepcopy(pieces))
+    for move_data in simulated_data:
+        if piece.color == "white" and move_data["white king in check"]:
+            continue
+        elif piece.color == "black" and move_data["black king in check"]:
+            continue
+        possible_moves.append(move_data["move"])
+    return possible_moves
+
 
 
         
@@ -345,25 +380,17 @@ while True:
                 check_pieces.append(black_king)
         print(check_pieces)
     window.fill((255, 255, 255))
+    
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
         if event.type == pygame.MOUSEBUTTONDOWN:
             pressed_piece = get_pressed_pieces(pieces)
             
-            if len(check_pieces) > 0 and pressed_piece.type != "king":
-                simulated_move_data = simulate_moves(main_board, pressed_piece.get_board_index(), pieces)
-                for move_data in simulated_move_data:
-                    if move_data["white king in check"] or move_data["black king in check"]:
-                        continue
-                    else:
-                        selected_piece_moves.append(move_data["move"])
-                print("your king is in danger!!")
-            
-            
             if not selected_piece:
                 selected_piece = pressed_piece
                 if selected_piece:
+                    print(selected_piece)
                     selected_piece_moves = get_possible_moves(main_board, selected_piece)
             else:
                 move_executed = choose_move(main_board, selected_piece)

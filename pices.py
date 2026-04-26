@@ -1,4 +1,5 @@
 import pygame
+import copy
 pygame.init()
 class Piece:
     def __init__(self, board, e_type, images, color):
@@ -32,6 +33,19 @@ class Piece:
 
     def on_move_code(self, move):
         self.first_move = False
+    
+    def clone(self):
+        return copy.copy(self)
+    def __getstate__(self):
+        # Copy the object's state but remove the 'image' or 'surface'
+        state = self.__dict__.copy()
+        if 'images' in state: 
+            del state['images'] # Don't try to clone the actual Pygame image
+        return state
+
+    def __setstate__(self, state):
+        # Restore the state (you'll need to re-link images manually if needed)
+        self.__dict__.update(state)
 
 class Move:
     def __init__(self, vector: list[int, int], range = 8, can_kill = True, kill_only = False):
@@ -119,3 +133,5 @@ class Ghost:
 
     def update(self):
         self.health -= 1
+    def clone(self):
+        return copy.copy(self)
