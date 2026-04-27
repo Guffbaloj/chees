@@ -130,7 +130,8 @@ class Ghost:
         self.type = "ghost"
     def render(self, display):
         pass
-
+    def get_board_index(self):
+        return self.board_index
     def update(self):
         self.health -= 1
     def clone(self):

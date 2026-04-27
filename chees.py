@@ -30,9 +30,7 @@ black_king = None
 #
 #FUNCTIONS
 #
-def draw_square(display, pos, size, color):
-    rect = pygame.rect.Rect(pos[0], pos[1], size, size)
-    pygame.draw.rect(display, color, rect)
+
 
 def mk_board(size):
     gridd = []
@@ -49,23 +47,35 @@ def render_board(display, board):
     square_size = board["square size"]
     render_offset = board["render offset"]
     color = (0, 0, 0)
+
+    def draw_square(display, pos, size, color):
+        rect = pygame.rect.Rect(pos[0], pos[1], size, size)
+        pygame.draw.rect(display, color, rect)
+
+    def draw_highlight(display, pos, square_size, color):
+        square_size = square_size / 2
+        pygame.draw.circle(display, color, (pos[0] + square_size, pos[1] + square_size), square_size)
     for i in range(len(board["gridd"])):
         x = (i % board_size) * square_size + render_offset[0]
         y = (i // board_size) * square_size + render_offset[1]
         w = 255 * ((i + (i // board_size) % 2) % 2)
         color = (w, w, w)
+        highlight_color = None
         if selected_piece != None:
             if selected_piece == board["gridd"][i]:
-                color = (100, 155, 100)
+                highlight_color = (100, 155, 100)
             for move in selected_piece_moves:
                 if i == move[0]:
                     if move[1]:
-                        color = (155, 100, 100)
+                        highlight_color = (155, 100, 100)
                     else:
-                        color = (255, 255, 0)
+                        highlight_color = (255, 255, 0)
         if board["gridd"][i] in check_pieces:
-            color = (255, 255, 0)
+            highlight_color = (255, 255, 0)
+        
         draw_square(display, (x, y), square_size, color)
+        if highlight_color:
+            draw_highlight(display, (x, y), square_size, highlight_color)
 def render_pieces(display, piece_list):
     for piece in piece_list:
         piece.render(display)
@@ -280,18 +290,18 @@ def get_possible_moves(board, piece: Piece):
 size = 8
 main_board = mk_board(size)
 
-images = {"white pawn": load_piece_image("bonne.png", main_board),
-          "black pawn": load_piece_image("bonne2.png", main_board),
-          "white rook": load_piece_image("rook.png", main_board),
-          "black rook": load_piece_image("rook2.png", main_board),
-          "white knight": load_piece_image("horce.png", main_board),
-          "black knight": load_piece_image("horce2.png", main_board),
-          "white bishop": load_piece_image("bishop.png", main_board),
-          "black bishop": load_piece_image("bishop2.png", main_board),
-          "white queen": load_piece_image("queen.png", main_board),
-          "black queen": load_piece_image("queen2.png", main_board),
-          "white king": load_piece_image("king.png", main_board),
-          "black king": load_piece_image("king2.png", main_board)}
+images = {"white pawn": load_piece_image("white_pawn.png", main_board),
+          "black pawn": load_piece_image("black_pawn.png", main_board),
+          "white rook": load_piece_image("white_rook.png", main_board),
+          "black rook": load_piece_image("black_rook.png", main_board),
+          "white knight": load_piece_image("white_knight.png", main_board),
+          "black knight": load_piece_image("black_knight.png", main_board),
+          "white bishop": load_piece_image("white_bishop.png", main_board),
+          "black bishop": load_piece_image("black_bishop.png", main_board),
+          "white queen": load_piece_image("white_queen.png", main_board),
+          "black queen": load_piece_image("black_queen.png", main_board),
+          "white king": load_piece_image("white_king.png", main_board),
+          "black king": load_piece_image("black_king.png", main_board)}
 
 
 
