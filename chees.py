@@ -203,6 +203,9 @@ def execute_move(board, piece: Piece, move, pieces):
         for p in pieces:
             if p.get_board_index() == target_index:
                 piece_to_remove = p
+                if p.type == "ghost":
+                    piece_to_remove = p.parent
+                
                 break
         
         if piece_to_remove:
